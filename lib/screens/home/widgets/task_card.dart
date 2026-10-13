@@ -16,6 +16,14 @@ class TaskCard extends ConsumerWidget {
 
   Color _getTagColor(String tag) {
     switch (tag.toLowerCase()) {
+      case 'delivery':
+        return AppColors.tagOrange;
+      case 'shift':
+        return AppColors.tagIndigo;
+      case 'ride':
+        return AppColors.tagGreen;
+      case 'freelance':
+        return AppColors.tagPurple;
       case 'personal':
         return AppColors.tagOrange;
       case 'work':

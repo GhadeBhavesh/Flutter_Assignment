@@ -107,6 +107,9 @@ class TaskNotifier extends StateNotifier<List<Task>> {
           .toList();
     }
 
+    // Sort strictly by due date (earliest to latest) as required by assignment
+    filtered.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+
     state = filtered;
   }
 

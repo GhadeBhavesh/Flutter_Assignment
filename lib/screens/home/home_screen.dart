@@ -32,51 +32,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.filter_list_rounded, color: AppColors.primary),
-                title: const Text('Filter Tasks', style: TextStyle(fontWeight: FontWeight.w600)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  FilterDialog.show(context);
-                },
+
+      builder:
+          (ctx) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(
+                      Icons.filter_list_rounded,
+                      color: AppColors.primary,
+                    ),
+                    title: const Text(
+                      'Filter Tasks',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      FilterDialog.show(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.refresh_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                    title: const Text(
+                      'Clear Filters',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    onTap: () {
+                      _searchController.clear();
+                      ref.read(taskProvider.notifier).clearFilters();
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.logout_rounded,
+                      color: AppColors.tagRed,
+                    ),
+                    title: const Text(
+                      'Log Out',
+                      style: TextStyle(
+                        color: AppColors.tagRed,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    onTap: () async {
+                      final nav = Navigator.of(context);
+                      Navigator.pop(ctx);
+                      await ref.read(authProvider.notifier).signOut();
+                      if (!mounted) return;
+                      nav.pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                  ),
+                ],
               ),
-              ListTile(
-                leading: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary),
-                title: const Text('Clear Filters', style: TextStyle(fontWeight: FontWeight.w600)),
-                onTap: () {
-                  _searchController.clear();
-                  ref.read(taskProvider.notifier).clearFilters();
-                  Navigator.pop(ctx);
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.logout_rounded, color: AppColors.tagRed),
-                title: const Text('Log Out', style: TextStyle(color: AppColors.tagRed, fontWeight: FontWeight.w600)),
-                onTap: () async {
-                  final nav = Navigator.of(context);
-                  Navigator.pop(ctx);
-                  await ref.read(authProvider.notifier).signOut();
-                  if (!mounted) return;
-                  nav.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false,
-                  );
-                },
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -100,22 +122,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final groupedTasks = _groupTasks(tasks);
     final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
 
-    // Order priority for group headers
-    final groupKeys = groupedTasks.keys.toList()
-      ..sort((a, b) {
-        int getWeight(String k) {
-          if (k == 'Today') return 0;
-          if (k == 'Tomorrow') return 1;
-          if (k == 'This week') return 2;
-          if (k == 'Overdue') return -1;
-          return 3;
-        }
-
-        final wA = getWeight(a);
-        final wB = getWeight(b);
-        if (wA != wB) return wA.compareTo(wB);
-        return a.compareTo(b);
-      });
+    // Sort groups strictly chronologically by earliest due date
+    final groupKeys =
+        groupedTasks.keys.toList()..sort((a, b) {
+          final taskA = groupedTasks[a]!.first;
+          final taskB = groupedTasks[b]!.first;
+          return taskA.dueDate.compareTo(taskB.dueDate);
+        });
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -130,12 +143,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF7578F8),
-                    Color(0xFF6366F1),
-                  ],
+                  colors: [Color(0xFF7578F8), Color(0xFF6366F1)],
                 ),
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
               ),
               child: SafeArea(
                 bottom: false,
@@ -144,24 +153,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // Translucent Decorative Curves
                     Positioned(
                       left: -35,
-                      top: -20,
+                      bottom: -20,
                       child: Container(
                         width: 160,
                         height: 160,
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: -40,
-                      bottom: -30,
-                      child: Container(
-                        width: 140,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -178,7 +175,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             children: [
                               // Grid Icon
                               const Icon(
-                                Icons.grid_view_rounded,
+                                Icons.grid_view,
                                 color: Colors.white,
                                 size: 24,
                               ),
@@ -189,13 +186,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               Expanded(
                                 child: Container(
                                   height: 38,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(19),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.06),
+                                        color: Colors.black.withValues(
+                                          alpha: 0.06,
+                                        ),
                                         blurRadius: 8,
                                         offset: const Offset(0, 2),
                                       ),
@@ -223,9 +224,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                             color: AppColors.textPrimary,
                                           ),
                                           decoration: const InputDecoration(
-                                            hintText: 'Search tasks...',
+                                            // hintText: 'Search tasks...',
                                             hintStyle: TextStyle(
-                                              color: Color(0xFFB0B7C3),
+                                              color: Colors.white,
                                               fontSize: 13,
                                             ),
                                             isDense: true,
@@ -297,7 +298,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             'My tasks',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 24,
+                              fontSize: 15,
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.3,
                             ),
@@ -312,163 +313,230 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
             // Main Body: Task list or empty state (Overflow-proof)
             Expanded(
-              child: tasks.isEmpty
-                  ? SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(height: 20),
-                            Container(
-                              width: 72,
-                              height: 72,
-                              decoration: const BoxDecoration(
-                                color: AppColors.primaryBgLight,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.task_alt_rounded,
-                                size: 36,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'No tasks found',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Tap the + button below to create your first task.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
+              child:
+                  tasks.isEmpty
+                      ? SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 32.0,
                         ),
-                      ),
-                    )
-                  : ListView.builder(
-                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
-                      itemCount: groupKeys.length,
-                      itemBuilder: (context, index) {
-                        final groupKey = groupKeys[index];
-                        final groupItems = groupedTasks[groupKey]!;
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 12, top: 8),
-                              child: Text(
-                                groupKey,
-                                style: const TextStyle(
-                                  fontSize: 16,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(height: 20),
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primaryBgLight,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.task_alt_rounded,
+                                  size: 36,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'No tasks found',
+                                style: TextStyle(
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.textPrimary,
                                 ),
                               ),
-                            ),
-                            ...groupItems.map((task) => TaskCard(task: task)),
-                            const SizedBox(height: 10),
-                          ],
-                        );
-                      },
-                    ),
-            ),
-
-            // Clean Bottom Navigation Bar (Hidden when typing to prevent keyboard overflow)
-            if (!isKeyboardVisible)
-              Container(
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 16,
-                      offset: const Offset(0, -4),
-                    ),
-                  ],
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      // List icon (Active)
-                      IconButton(
-                        icon: const Icon(
-                          Icons.format_list_bulleted_rounded,
-                          color: AppColors.primary,
-                          size: 26,
-                        ),
-                        onPressed: () {},
-                      ),
-
-                      // Center Floating Add Button
-                      GestureDetector(
-                        onTap: () => AddTaskDialog.show(context),
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF7A79FB),
-                                AppColors.primary,
-                              ],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.38),
-                                blurRadius: 12,
-                                offset: const Offset(0, 5),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Tap the + button below to create your first task.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ],
                           ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.add_rounded,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
                         ),
-                      ),
+                      )
+                      : ListView.builder(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                        itemCount: groupKeys.length,
+                        itemBuilder: (context, index) {
+                          final groupKey = groupKeys[index];
+                          final groupItems = groupedTasks[groupKey]!;
 
-                      // Calendar icon
-                      IconButton(
-                        icon: const Icon(
-                          Icons.calendar_today_outlined,
-                          color: Color(0xFFBAC0CD),
-                          size: 22,
-                        ),
-                        onPressed: () {
-                          FilterDialog.show(context);
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 12,
+                                  top: 8,
+                                ),
+                                child: Text(
+                                  groupKey,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                              ...groupItems.map((task) => TaskCard(task: task)),
+                              const SizedBox(height: 10),
+                            ],
+                          );
                         },
                       ),
-                    ],
-                  ),
-                ),
-              ),
+            ),
           ],
+        ),
+        floatingActionButtonLocation:
+            const _ElevatedCenterDockedFabLocation(offsetY: -6.0),
+        floatingActionButton:
+            isKeyboardVisible ? null : _buildAddEditButton(context),
+        bottomNavigationBar:
+            isKeyboardVisible ? null : _buildBottomNav(context),
+      ),
+    );
+  }
+
+  /// Elevated Floating Add/Edit Task Button positioned prominently above the navigation bar
+  Widget _buildAddEditButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => AddTaskDialog.show(context),
+      child: Container(
+        width: 54,
+        height: 54,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF7A79FB), AppColors.primary],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.40),
+              blurRadius: 12,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Center(
+          child: _buildAddEditIcon(),
         ),
       ),
     );
+  }
+
+  /// Composite Add (+) and Edit (pencil) icon matching the reference design
+  Widget _buildAddEditIcon() {
+    return SizedBox(
+      width: 26,
+      height: 26,
+      child: Stack(
+        children: [
+          // Plus symbol at top-left
+          const Positioned(
+            left: 1,
+            top: 2,
+            child: Icon(
+              Icons.add_rounded,
+              color: Colors.white,
+              size: 15,
+            ),
+          ),
+          // Diagonal pencil symbol at bottom-right
+          const Positioned(
+            right: 0,
+            bottom: 1,
+            child: Icon(
+              Icons.edit_rounded,
+              color: Colors.white,
+              size: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Bottom Navigation Bar with space for the docked elevated center button
+  Widget _buildBottomNav(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // List icon (Active)
+              IconButton(
+                icon: const Icon(
+                  Icons.format_list_bulleted_rounded,
+                  color: AppColors.primary,
+                  size: 26,
+                ),
+                onPressed: () {},
+              ),
+
+              // Spacer reserving width for the center floating button
+              const SizedBox(width: 56),
+
+              // Calendar icon
+              IconButton(
+                icon: const Icon(
+                  Icons.calendar_today_outlined,
+                  color: Color(0xFFBAC0CD),
+                  size: 22,
+                ),
+                onPressed: () {
+                  FilterDialog.show(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Custom docked location that elevates the button slightly higher above the bottom bar
+class _ElevatedCenterDockedFabLocation extends FloatingActionButtonLocation {
+  final double offsetY;
+
+  const _ElevatedCenterDockedFabLocation({this.offsetY = -6.0});
+
+  @override
+  Offset getOffset(ScaffoldPrelayoutGeometry scaffoldGeometry) {
+    final double fabX = (scaffoldGeometry.scaffoldSize.width -
+            scaffoldGeometry.floatingActionButtonSize.width) /
+        2.0;
+    final double contentBottom = scaffoldGeometry.contentBottom;
+    final double fabHeight = scaffoldGeometry.floatingActionButtonSize.height;
+    final double fabY = contentBottom - (fabHeight / 2.0) + offsetY;
+    return Offset(fabX, fabY);
   }
 }

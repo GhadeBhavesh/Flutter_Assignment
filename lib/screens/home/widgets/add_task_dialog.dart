@@ -36,12 +36,14 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   late List<String> _selectedCategories;
 
   final List<String> _availableCategories = [
-    'Personal',
+    'Delivery',
+    'Shift',
+    'Ride',
+    'Freelance',
     'Work',
-    'App',
+    'Personal',
     'Study',
     'Habit',
-    'CF',
   ];
 
   @override
